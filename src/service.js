@@ -11,6 +11,10 @@ class Service {
     if (!options) {
       throw new Error('Mongoose options have to be provided');
     }
+    if (options.Model && typeof options.Model === 'function' && !options.Model.modelName) {
+      this.getModel = options.Model;
+      options.Model = options.Model();
+    }
 
     if (!options.Model || !options.Model.modelName) {
       throw new Error('You must provide a Mongoose Model');
@@ -38,7 +42,7 @@ class Service {
   _find (params, count, getFilter = filter) {
     const { filters, query } = getFilter(params.query || {});
     const discriminator = (params.query || {})[this.discriminatorKey] || this.discriminatorKey;
-    const model = this.discriminators[discriminator] || this.Model;
+    const model = (this.getModel ? this.getModel(params, discriminator) : undefined) || this.discriminators[discriminator] || this.Model;
     const q = model.find(query).lean(this.lean);
 
     // $select uses a specific find syntax, so it has to come first.
@@ -120,9 +124,11 @@ class Service {
     params.query = params.query || {};
 
     const discriminator = (params.query || {})[this.discriminatorKey] || this.discriminatorKey;
-    const model = this.discriminators[discriminator] || this.Model;
+    const model = (this.getModel ? this.getModel(params, discriminator) : undefined) || this.discriminators[discriminator] || this.Model;
     let modelQuery = model
-      .findOne({ [this.id]: id });
+      .findOne({
+        [this.id]: id
+      });
 
     // Handle $populate
     if (params.query.$populate) {
@@ -131,7 +137,9 @@ class Service {
 
     // Handle $select
     if (params.query.$select && params.query.$select.length) {
-      let fields = { [this.id]: 1 };
+      let fields = {
+        [this.id]: 1
+      };
 
       for (let key of params.query.$select) {
         fields[key] = 1;
@@ -169,7 +177,7 @@ class Service {
 
   create (data, params) {
     const discriminator = data[this.discriminatorKey] || this.discriminatorKey;
-    const model = this.discriminators[discriminator] || this.Model;
+    const model = (this.getModel ? this.getModel(params, discriminator) : undefined) || this.discriminators[discriminator] || this.Model;
     return model.create(data)
       .then(result => {
         if (this.lean) {
@@ -208,12 +216,16 @@ class Service {
     } else {
       // If not using the default Mongo _id field set the id to its
       // previous value. This prevents orphaned documents.
-      data = Object.assign({}, data, { [this.id]: id });
+      data = Object.assign({}, data, {
+        [this.id]: id
+      });
     }
 
     const discriminator = (params.query || {})[this.discriminatorKey] || this.discriminatorKey;
-    const model = this.discriminators[discriminator] || this.Model;
-    let modelQuery = model.findOneAndUpdate({ [this.id]: id }, data, options);
+    const model = (this.getModel ? this.getModel(params, discriminator) : undefined) || this.discriminators[discriminator] || this.Model;
+    let modelQuery = model.findOneAndUpdate({
+      [this.id]: id
+    }, data, options);
 
     if (params && params.query && params.query.$populate) {
       modelQuery = modelQuery.populate(params.query.$populate);
@@ -234,7 +246,7 @@ class Service {
     // we create a list of the ids of all items that will be changed
     // to re-query them after the update
     const ids = id === null ? this._find(params)
-        .then(mapIds) : Promise.resolve([ id ]);
+      .then(mapIds) : Promise.resolve([id]);
 
     // Handle case where data might be a mongoose model
     if (typeof data.toObject === 'function') {
@@ -284,7 +296,7 @@ class Service {
           // If params.query.$populate was provided, remove it
           // from the query sent to mongoose.
           const discriminator = (params.query || {})[this.discriminatorKey] || this.discriminatorKey;
-          const model = this.discriminators[discriminator] || this.Model;
+          const model = (this.getModel ? this.getModel(params, discriminator) : undefined) || this.discriminators[discriminator] || this.Model;
           return model
             .update(omit(query, '$populate'), data, options)
             .lean(this.lean)
@@ -310,11 +322,11 @@ class Service {
     return this._getOrFind(id, params)
       .then(data =>
         this.Model
-          .remove(query)
-          .lean(this.lean)
-          .exec()
-          .then(() => data)
-          .then(select(params, this.id))
+        .remove(query)
+        .lean(this.lean)
+        .exec()
+        .then(() => data)
+        .then(select(params, this.id))
       )
       .catch(errorHandler);
   }

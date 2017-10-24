@@ -6,25 +6,27 @@ import errors from 'feathers-errors';
 import feathers from 'feathers';
 import service, { hooks, Service } from '../src';
 import server from './test-app';
-import { User, Pet, Peeps, CustomPeeps, Post, TextPost } from './models';
+import { User, Pet, Peeps, CustomPeeps, Post, TextPost, getUserModel } from './models';
 
 const _ids = {};
 const _petIds = {};
 const app = feathers()
-  .use('/peeps', service({ Model: Peeps, events: [ 'testing' ] }))
+  .use('/peeps', service({ Model: Peeps, events: ['testing'] }))
   .use('/peeps-customid', service({
     id: 'customid',
     Model: CustomPeeps,
-    events: [ 'testing' ]
+    events: ['testing']
   }))
   .use('/people', service({ Model: User, lean: false }))
   .use('/pets', service({ Model: Pet, lean: false }))
   .use('/people2', service({ Model: User }))
+  .use('/people3', service({ Model: getUserModel }))
   .use('/pets2', service({ Model: Pet }))
   .use('/posts', service({ Model: Post, discriminators: [TextPost] }));
 const people = app.service('people');
 const pets = app.service('pets');
 const leanPeople = app.service('people2');
+// const retirvePeople = app.service('people3');
 const leanPets = app.service('pets2');
 const posts = app.service('posts');
 
@@ -111,7 +113,7 @@ describe('Feathers Mongoose Service', () => {
     beforeEach(() => {
       // FIXME (EK): This is shit. We should be loading fixtures
       // using the raw driver not our system under test
-      return pets.create({type: 'dog', name: 'Rufus', gender: 'Unknown'}).then(pet => {
+      return pets.create({ type: 'dog', name: 'Rufus', gender: 'Unknown' }).then(pet => {
         _petIds.Rufus = pet._id;
 
         return people.create({
@@ -130,7 +132,7 @@ describe('Feathers Mongoose Service', () => {
       );
     });
 
-    it('can $select with a String', function (done) {
+    it('can $select with a String', function(done) {
       var params = {
         query: {
           name: 'Rufus',
@@ -144,7 +146,7 @@ describe('Feathers Mongoose Service', () => {
       });
     });
 
-    it('can $select with an Array', function (done) {
+    it('can $select with an Array', function(done) {
       var params = {
         query: {
           name: 'Rufus',
@@ -158,11 +160,11 @@ describe('Feathers Mongoose Service', () => {
       });
     });
 
-    it('can $select with an Object', function (done) {
+    it('can $select with an Object', function(done) {
       var params = {
         query: {
           name: 'Rufus',
-          $select: {'gender': true}
+          $select: { 'gender': true }
         }
       };
 
@@ -172,7 +174,7 @@ describe('Feathers Mongoose Service', () => {
       });
     });
 
-    it('can $populate with find', function (done) {
+    it('can $populate with find', function(done) {
       var params = {
         query: {
           name: 'Doug',
@@ -186,7 +188,7 @@ describe('Feathers Mongoose Service', () => {
       });
     });
 
-    it('can $populate with get', function (done) {
+    it('can $populate with get', function(done) {
       var params = {
         query: {
           $populate: ['pets']
@@ -199,7 +201,7 @@ describe('Feathers Mongoose Service', () => {
       }).catch(done);
     });
 
-    it('can patch a mongoose model', function (done) {
+    it('can patch a mongoose model', function(done) {
       people.get(_ids.Doug).then(dougModel => {
         people.patch(_ids.Doug, dougModel).then(data => {
           expect(data.name).to.equal('Doug');
@@ -208,7 +210,7 @@ describe('Feathers Mongoose Service', () => {
       }).catch(done);
     });
 
-    it('can patch a mongoose model', function (done) {
+    it('can patch a mongoose model', function(done) {
       people.get(_ids.Doug).then(dougModel => {
         people.update(_ids.Doug, dougModel).then(data => {
           expect(data.name).to.equal('Doug');
@@ -217,7 +219,7 @@ describe('Feathers Mongoose Service', () => {
       }).catch(done);
     });
 
-    it('can upsert with patch', function (done) {
+    it('can upsert with patch', function(done) {
       var data = { name: 'Henry', age: 300 };
       var params = {
         mongoose: { upsert: true },
@@ -233,7 +235,7 @@ describe('Feathers Mongoose Service', () => {
       }).catch(done);
     });
 
-    it('can $populate with update', function (done) {
+    it('can $populate with update', function(done) {
       var params = {
         query: {
           $populate: ['pets']
@@ -252,7 +254,7 @@ describe('Feathers Mongoose Service', () => {
       }).catch(done);
     });
 
-    it('can $populate with patch', function (done) {
+    it('can $populate with patch', function(done) {
       var params = {
         query: {
           $populate: ['pets']
@@ -266,7 +268,7 @@ describe('Feathers Mongoose Service', () => {
       }).catch(done);
     });
 
-    it('can $push an item onto an array with update', function (done) {
+    it('can $push an item onto an array with update', function(done) {
       pets.create({ type: 'cat', name: 'Margeaux' }).then(margeaux => {
         people.update(_ids.Doug, { $push: { pets: margeaux } })
           .then(() => {
@@ -284,7 +286,7 @@ describe('Feathers Mongoose Service', () => {
       }).catch(done);
     });
 
-    it('can $push an item onto an array with patch', function (done) {
+    it('can $push an item onto an array with patch', function(done) {
       pets.create({ type: 'cat', name: 'Margeaux' }).then(margeaux => {
         people.patch(_ids.Doug, { $push: { pets: margeaux } })
           .then(() => {
@@ -302,7 +304,7 @@ describe('Feathers Mongoose Service', () => {
       }).catch(done);
     });
 
-    it('runs validators on update', function () {
+    it('runs validators on update', function() {
       return people.create({ name: 'David', age: 33 })
         .then(person => people.update(person._id, { name: 'Dada', age: 'wrong' }))
         .then(() => {
@@ -314,7 +316,7 @@ describe('Feathers Mongoose Service', () => {
         });
     });
 
-    it('runs validators on patch', function (done) {
+    it('runs validators on patch', function(done) {
       people.create({ name: 'David', age: 33 })
         .then(person => people.patch(person._id, { name: 'Dada', age: 'wrong' }))
         .then(() => done(new Error('Update should not be successful')))
@@ -325,7 +327,7 @@ describe('Feathers Mongoose Service', () => {
         });
     });
 
-    it('returns a Conflict when unique index is violated', function (done) {
+    it('returns a Conflict when unique index is violated', function(done) {
       pets.create({ type: 'cat', name: 'Bob' })
         .then(() => pets.create({ type: 'cat', name: 'Bob' }))
         .then(() => done(new Error('Should not be successful')))
@@ -342,7 +344,7 @@ describe('Feathers Mongoose Service', () => {
     beforeEach((done) => {
       // FIXME (EK): This is shit. We should be loading fixtures
       // using the raw driver not our system under test
-      leanPets.create({type: 'dog', name: 'Rufus'}).then(pet => {
+      leanPets.create({ type: 'dog', name: 'Rufus' }).then(pet => {
         _petIds.Rufus = pet._id;
 
         return leanPeople.create({ name: 'Doug', age: 32, pets: [pet._id] }).then(user => {
@@ -360,7 +362,7 @@ describe('Feathers Mongoose Service', () => {
       });
     });
 
-    it('can $populate with find', function (done) {
+    it('can $populate with find', function(done) {
       var params = {
         query: {
           name: 'Doug',
@@ -374,7 +376,7 @@ describe('Feathers Mongoose Service', () => {
       });
     });
 
-    it('can $populate with get', function (done) {
+    it('can $populate with get', function(done) {
       var params = {
         query: {
           $populate: ['pets']
@@ -387,7 +389,7 @@ describe('Feathers Mongoose Service', () => {
       }).catch(done);
     });
 
-    it('can upsert with patch', function (done) {
+    it('can upsert with patch', function(done) {
       var data = { name: 'Henry', age: 300 };
       var params = {
         mongoose: { upsert: true },
@@ -412,42 +414,42 @@ describe('Feathers Mongoose Service', () => {
 
     afterEach(done => {
       posts.remove(null, { query: {} })
-      .then(data => {
-        done();
-      });
-    });
-
-    it('can get a discriminated model', function (done) {
-      posts.create(data)
-      .then(data => posts.get(data._id))
-      .then(data => {
-        expect(data._type).to.equal('text');
-        expect(data.text).to.equal('Feathers!!!');
-        done();
-      });
-    });
-
-    it('can find discriminated models by the type', function (done) {
-      posts.create(data)
-      .then(data => posts.find({ query: { _type: 'text' } }))
-      .then(data => {
-        data.forEach(element => {
-          expect(element._type).to.equal('text');
+        .then(data => {
+          done();
         });
-        done();
-      });
     });
 
-    it('can create a discriminated model', function (done) {
+    it('can get a discriminated model', function(done) {
       posts.create(data)
-      .then(data => {
-        expect(data._type).to.equal('text');
-        expect(data.text).to.equal('Feathers!!!');
-        done();
-      });
+        .then(data => posts.get(data._id))
+        .then(data => {
+          expect(data._type).to.equal('text');
+          expect(data.text).to.equal('Feathers!!!');
+          done();
+        });
     });
 
-    it('can update a discriminated model', function (done) {
+    it('can find discriminated models by the type', function(done) {
+      posts.create(data)
+        .then(data => posts.find({ query: { _type: 'text' } }))
+        .then(data => {
+          data.forEach(element => {
+            expect(element._type).to.equal('text');
+          });
+          done();
+        });
+    });
+
+    it('can create a discriminated model', function(done) {
+      posts.create(data)
+        .then(data => {
+          expect(data._type).to.equal('text');
+          expect(data.text).to.equal('Feathers!!!');
+          done();
+        });
+    });
+
+    it('can update a discriminated model', function(done) {
       const update = {
         _type: 'text',
         text: 'Hello, world!',
@@ -460,15 +462,15 @@ describe('Feathers Mongoose Service', () => {
         }
       };
       posts.create(data)
-      .then(data => posts.update(data._id, update, params))
-      .then(data => {
-        expect(data._type).to.equal('text');
-        expect(data.text).to.equal('Hello, world!');
-        done();
-      });
+        .then(data => posts.update(data._id, update, params))
+        .then(data => {
+          expect(data._type).to.equal('text');
+          expect(data.text).to.equal('Hello, world!');
+          done();
+        });
     });
 
-    it('can patch a discriminated model', function (done) {
+    it('can patch a discriminated model', function(done) {
       const update = {
         text: 'Howdy folks!'
       };
@@ -478,20 +480,20 @@ describe('Feathers Mongoose Service', () => {
         }
       };
       posts.create(data)
-      .then(data => posts.patch(data._id, update, params))
-      .then(data => {
-        expect(data.text).to.equal('Howdy folks!');
-        done();
-      });
+        .then(data => posts.patch(data._id, update, params))
+        .then(data => {
+          expect(data.text).to.equal('Howdy folks!');
+          done();
+        });
     });
 
-    it('can remove a discriminated model', function (done) {
+    it('can remove a discriminated model', function(done) {
       posts.create(data)
-      .then(data => posts.remove(data._id, { query: { _type: 'text' } }))
-      .then(data => {
-        expect(data._type).to.equal('text');
-        done();
-      });
+        .then(data => posts.remove(data._id, { query: { _type: 'text' } }))
+        .then(data => {
+          expect(data._type).to.equal('text');
+          done();
+        });
     });
   });
 
